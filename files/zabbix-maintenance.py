@@ -185,6 +185,7 @@ def main():
         login_user = configParser.get('DEFAULT', 'zabbix-api.user')
         login_password = configParser.get('DEFAULT', 'zabbix-api.password')
         server_url = configParser.get('DEFAULT', 'zabbix-api.url')
+        validate_certs = configParser.getboolean('DEFAULT', 'zabbix-api.validate_certs')
         log.debug("Got user=%s, url=%s from %s" % (login_user, server_url, args.config))
     else:
         login_user          = args.user
@@ -215,7 +216,7 @@ def main():
         maintenance_type = 1
 
     try:
-        zbx = ZabbixAPI(server_url, timeout=5, user=login_user, passwd=login_password)
+        zbx = ZabbixAPI(server_url, timeout=5, user=login_user, passwd=login_password, validate_certs=validate_certs)
         zbx.login(login_user, login_password)
 
     except BaseException:

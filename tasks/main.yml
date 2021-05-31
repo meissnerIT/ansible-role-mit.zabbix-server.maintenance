@@ -10,7 +10,16 @@
   apt: 
     pkg: python-pip
 
-- name: Install pyzabbix via pip
+# https://github.com/gescheit/scripts
+- name: Install zabbix-api via pip
   pip:
     name: zabbix-api
+
+# WIP, v0.4 -> https://github.com/gescheit/scripts/blob/master/zabbix/zabbix_api.py from 2021-05-31
+# Adds validate_certs
+- name: Copy zabbix_api.py
+  copy:
+    src: zabbix_api.py
+    dest: /usr/local/lib/python2.7/dist-packages/
+  when: "ansible_hostname == 'zabbix'"
 
