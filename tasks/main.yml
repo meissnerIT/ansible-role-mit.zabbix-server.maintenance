@@ -1,0 +1,16 @@
+---
+
+- name: Copy zabbix-maintenance.py
+  copy:
+    src: zabbix-maintenance.py
+    dest: /usr/lib/zabbix/externalscripts/
+    mode: 0755
+
+- name: Install python-pip
+  apt: 
+    pkg: python-pip
+
+- name: Install pyzabbix via pip
+  pip:
+    name: zabbix-api
+
