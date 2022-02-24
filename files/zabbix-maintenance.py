@@ -6,7 +6,7 @@
 # #20771: Zabbix Maintenance Skript
 # Based on https://github.com/RafPe/hubot-zabbix-scripts
 #
-# v2021-05-31 by markus.meissner@meissner.IT
+# v2022-02-24 by markus.meissner@meissner.IT
 
 import ConfigParser
 import datetime
@@ -47,7 +47,7 @@ parser.add_argument('-t','--target',help='Zabbix target host/group', required=Fa
 parser.add_argument('-s','--server',help='Zabbix server', required=False)
 parser.add_argument('-a','--action',help='Action to be taken', required=True)
 parser.add_argument('-l','--length',help='Maintanance length', required=False)
-parser.add_argument('-d','--desc',help='Maintanance description', required=False)
+parser.add_argument('-d','--desc',help='Maintanance description', required=False, default='')
 parser.add_argument('-r','--requestor',help='Maintanance requested by', required=False)
 parser.add_argument('-i','--id',help='Maintanance uuid', required=False)
 args = parser.parse_args()
@@ -73,7 +73,7 @@ def create_maintenance(zbx, group_ids, host_ids, start_time, maintenance_type, p
             }
         )
     except BaseException as e:
-        print e
+        print(e)
         return None
 
     referenceids = ', '.join(str(x) for x in res['maintenanceids'])
@@ -226,7 +226,7 @@ def main():
     if state == "set":
 
             now         = datetime.datetime.now()
-            start_time  = time.mktime(now.timetuple())
+            start_time  = int(time.mktime(now.timetuple()))
             period      = 60 * int(args.length)  # N * 60 seconds
 
             # Defined our array for group IDs
