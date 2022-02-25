@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # Distributed via ansible - mit.zabbix-agent.https-sites
@@ -8,7 +8,7 @@
 #
 # v2022-02-24 by markus.meissner@meissner.IT
 
-import ConfigParser
+import configparser
 import datetime
 import time
 import argparse
@@ -78,8 +78,8 @@ def create_maintenance(zbx, group_ids, host_ids, start_time, maintenance_type, p
 
     referenceids = ', '.join(str(x) for x in res['maintenanceids'])
 
-    print "Success! Created maintanance for %s groups/%s hosts with name '%s'" %(len(group_ids) if group_ids else "0", len(host_ids) if host_ids else "0" ,name )
-    print "Reference IDs: %s "%referenceids
+    print("Success! Created maintanance for %s groups/%s hosts with name '%s'" %(len(group_ids) if group_ids else "0", len(host_ids) if host_ids else "0" ,name ))
+    print("Reference IDs: %s "%referenceids)
 
     return "Maintenance created"
 
@@ -110,7 +110,7 @@ def delete_maintenance(zbx, maintenance_id):
     try:
         zbx.maintenance.delete(maintenance_id)
         # print "nothing to watch here - would delete %s" % maintenance_id
-        print "Maintanance %s has been deleted" % maintenance_id
+        print("Maintanance %s has been deleted" % maintenance_id)
     except BaseException as e:
         return None
     return "Done!"
@@ -136,7 +136,7 @@ def get_group_id(zbx, host_group):
         )
 
     except BaseException as e:
-        print e
+        print(e)
         return None
 
     if not result:
@@ -165,7 +165,7 @@ def get_host_id(zbx, host_names):
         )
 
     except BaseException as e:
-        print e
+        print(e)
         return None
 
     if not result:
@@ -179,7 +179,7 @@ def main():
         log.error("Missing requried zabbix-api module")
 
     if args.config:
-        configParser = ConfigParser.RawConfigParser()
+        configParser = configparser.RawConfigParser()
         configFilePath = args.config
         configParser.read(configFilePath)
         login_user = configParser.get('DEFAULT', 'zabbix-api.user')
@@ -288,7 +288,7 @@ def main():
                     print("Failed to create maintenance")
 
             else:
-                print "Maintanance already exists : %s" % maintenance
+                print("Maintanance already exists : %s" % maintenance)
 
     elif state == "del":
 
@@ -304,7 +304,7 @@ def main():
 
 
     else:
-        print "Not implemented in this version yet :/ "
+        print("Not implemented in this version yet :/ ")
 
 if __name__ == '__main__':
     main()

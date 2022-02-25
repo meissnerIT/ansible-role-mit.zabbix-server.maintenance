@@ -6,13 +6,14 @@
     dest: /usr/lib/zabbix/externalscripts/
     mode: 0755
 
-- name: Install python-pip
+- name: Install python3-pip
   apt: 
-    pkg: python-pip
+    pkg: python3-pip
 
 # https://github.com/gescheit/scripts
-- name: Install zabbix-api via pip
+- name: Install zabbix-api via pip3
   pip:
+    executable: pip3
     name: zabbix-api
 
 # WIP, v0.4 -> https://github.com/gescheit/scripts/blob/master/zabbix/zabbix_api.py from 2021-05-31
@@ -20,6 +21,6 @@
 - name: Copy zabbix_api.py
   copy:
     src: zabbix_api.py
-    dest: /usr/local/lib/python2.7/dist-packages/
+    dest: /usr/local/lib/python3.7/dist-packages/
   when: "ansible_hostname == 'zabbix'"
 
