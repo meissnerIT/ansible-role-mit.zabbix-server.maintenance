@@ -6,7 +6,7 @@
 # #20771: Zabbix Maintenance Skript
 # Based on https://github.com/RafPe/hubot-zabbix-scripts
 #
-# v2022-02-24 by markus.meissner@meissner.IT
+# v2022-05-17 by markus.meissner@meissner.IT
 
 import configparser
 import datetime
@@ -62,13 +62,13 @@ def create_maintenance(zbx, group_ids, host_ids, start_time, maintenance_type, p
                 "hostids": host_ids,
                 "name": name,
                 "maintenance_type": maintenance_type,
-                "active_since": str(start_time),
-                "active_till": str(end_time),
-                "description": desc,
+                "active_since": int(start_time),
+                "active_till": int(end_time),
+                "description": str(desc),
                 "timeperiods":  [{
                     "timeperiod_type": "0",
-                    "start_date": str(start_time),
-                    "period": str(period),
+                    "start_date": int(start_time),
+                    "period": int(period),
                 }]
             }
         )
