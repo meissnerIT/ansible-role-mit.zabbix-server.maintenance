@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# Distributed via ansible - mit.zabbix-agent.https-sites
+# Distributed via ansible - mit.zabbix-server.maintenance
 #
 # #20771: Zabbix Maintenance Skript
 # Based on https://github.com/RafPe/hubot-zabbix-scripts
