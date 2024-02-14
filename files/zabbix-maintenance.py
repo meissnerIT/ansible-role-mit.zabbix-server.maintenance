@@ -6,7 +6,7 @@
 # #20771: Zabbix Maintenance Skript
 # Based on https://github.com/RafPe/hubot-zabbix-scripts
 #
-# v2022-05-17 by markus.meissner@meissner.IT
+# v2024-02-14 by markus.meissner@meissner.IT
 
 import configparser
 import datetime
@@ -219,8 +219,9 @@ def main():
         zbx = ZabbixAPI(server_url, timeout=5, user=login_user, passwd=login_password, validate_certs=validate_certs)
         zbx.login(login_user, login_password)
 
-    except BaseException:
-        print("ERROR: Failed to connect to Zabbix server")
+    except BaseException as e:
+        log.error("ERROR: Failed to connect to Zabbix server")
+        log.error(e)
 
 
     if state == "set":
