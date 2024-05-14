@@ -159,7 +159,7 @@ def get_host_id(zbx, host_names):
                 "output": "extend",
                 "filter":
                 {
-                    "name": host_names
+                    "host": host_names
                 }
             }
         )
