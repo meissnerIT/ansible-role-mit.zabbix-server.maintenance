@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/opt/mit-zabbix-maintenance/.venv/bin/python
 # -*- coding: utf-8 -*-
 #
 # Distributed via ansible - mit.zabbix-server.maintenance
@@ -7,6 +7,7 @@
 # Based on https://github.com/RafPe/hubot-zabbix-scripts
 #
 # v2024-02-14 by markus.meissner@meissner.IT
+# v2024-10-24: Switched to pyzabbix, not all features are changed / tested
 
 import configparser
 import datetime
@@ -17,6 +18,7 @@ import uuid
 import logging
 import os
 import sys
+from pyzabbix import ZabbixAPI
 
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 shStdout = logging.StreamHandler(sys.stdout)
@@ -29,12 +31,6 @@ log.addHandler(shStdout)
 log.addHandler(shStderr)
 log.setLevel(logging.INFO)
 #log.setLevel(logging.DEBUG)
-
-try:
-    from zabbix_api import ZabbixAPI
-    HAS_ZABBIX_API = True
-except ImportError:
-    HAS_ZABBIX_API = False
 
 
 __author__ = 'RafPe'
@@ -50,6 +46,7 @@ parser.add_argument('-l','--length',help='Maintanance length', required=False)
 parser.add_argument('-d','--desc',help='Maintanance description', required=False, default='')
 parser.add_argument('-r','--requestor',help='Maintanance requested by', required=False)
 parser.add_argument('-i','--id',help='Maintanance uuid', required=False)
+parser.add_argument('-v','--verbose',help='Be verbose', required=False)
 args = parser.parse_args()
 
 
@@ -85,24 +82,10 @@ def create_maintenance(zbx, group_ids, host_ids, start_time, maintenance_type, p
 
 
 def get_maintenance_id_by_id(zbx, name):
-    try:
-        result = zbx.maintenance.get(
-            {
-                "filter":
-                {
-                    "name": name
-                }
-            }
-        )
-    except BaseException as e:
-        return None
-
+    result = zbx.maintenance.get(filter={"name": name})
     maintenance_ids = []
-
     for res in result:
         maintenance_ids.append(res["maintenanceid"])
-
-
     return maintenance_ids
 
 
@@ -117,27 +100,14 @@ def delete_maintenance(zbx, maintenance_id):
 
 
 def get_group_id(zbx, host_group):
-    try:
+    log.debug(f"get_group_id(zbx, {host_group})")
+    if '\"' in host_group:
+        host_group = host_group.replace("\"","")
 
-        if '\"' in host_group:
-            host_group = host_group.replace("\"","")
+    # Issue:1 whitespace in groups/hosts
+    host_group = host_group.strip(" \n\t\r")
 
-        # Issue:1 whitespace in groups/hosts
-        host_group = host_group.strip(" \n\t\r")
-
-        result = zbx.hostgroup.get(
-            {
-                "output": "extend",
-                "filter":
-                {
-                    "name": host_group
-                }
-            }
-        )
-
-    except BaseException as e:
-        print(e)
-        return None
+    result = zbx.hostgroup.get(filter={"name": host_group})
 
     if not result:
         return None
@@ -145,38 +115,20 @@ def get_group_id(zbx, host_group):
     return result[0]["groupid"]
 
 
-def get_host_id(zbx, host_names):
-    try:
+def get_host_id(zapi, host_names):
+    if '\"' in host_names:
+        host_names = host_names.replace("\"","")
 
-        if '\"' in host_names:
-            host_names = host_names.replace("\"","")
+    # Issue:1 whitespace in groups/hosts
+    host_names = host_names.strip(" \n\t\r")
 
-        # Issue:1 whitespace in groups/hosts
-        host_names = host_names.strip(" \n\t\r")
-
-        result = zbx.host.get(
-            {
-                "output": "extend",
-                "filter":
-                {
-                    "host": host_names
-                }
-            }
-        )
-
-    except BaseException as e:
-        print(e)
-        return None
-
+    result = zapi.host.get(filter={"host": host_names})
     if not result:
         return None
-
+    log.debug("Search({}): {}".format(host_names, result))
     return result[0]["hostid"]
 
 def main():
-
-    if not HAS_ZABBIX_API:
-        log.error("Missing requried zabbix-api module")
 
     if args.config:
         configParser = configparser.RawConfigParser()
@@ -215,14 +167,34 @@ def main():
     else:
         maintenance_type = 1
 
-    try:
-        zbx = ZabbixAPI(server_url, timeout=5, user=login_user, passwd=login_password, validate_certs=validate_certs)
-        zbx.login(login_user, login_password)
 
-    except BaseException as e:
-        log.error("ERROR: Failed to connect to Zabbix server")
-        log.error(e)
+    ##############################################################################
+    # mit-pyzabbix.py v2023-09-20
+    ##############################################################################
+    # https://github.com/lukecyca/pyzabbix/issues/157
+    # detect_version=False only needed for pyzabbix < 1.3
+    zapi = ZabbixAPI(configParser.get('DEFAULT', 'zabbix-api.url'))
+    if configParser.has_option('DEFAULT', 'zabbix-api.verify'):
+        # https://requests.readthedocs.io/en/master/user/advanced/#ssl-cert-verification
+        zapi.session.verify = configParser.get('DEFAULT', 'zabbix-api.verify')
+    elif not configParser.getboolean('DEFAULT', 'zabbix-api.certificate_verification', fallback=True):
+        # https://urllib3.readthedocs.io/en/latest/advanced-usage.html#ssl-warnings
+        urllib3.disable_warnings()
+        zapi.session.verify = False
+        log.info("Disabled certificate verification - please don't use this in production!")
 
+    # https://requests.readthedocs.io/en/latest/user/advanced/#proxies
+    if configParser.has_option('DEFAULT', 'zabbix-api.proxy'):
+        proxies = {
+            'http': configParser.get('DEFAULT', 'zabbix-api.proxy'),
+            'https': configParser.get('DEFAULT', 'zabbix-api.proxy')
+        }
+        zapi.session.proxies.update(proxies)
+
+    zapi.login(configParser.get('DEFAULT', 'zabbix-api.user'), configParser.get('DEFAULT', 'zabbix-api.password'))
+    log.debug("Connected to Zabbix API Version %s" % zapi.api_version())
+
+    #zbx = zapi
 
     if state == "set":
 
@@ -239,52 +211,46 @@ def main():
             # Query for groups
             if ',' in target:
                 for group in target.strip().split(","):
-                    result = get_group_id(zbx, group)
+                    result = get_group_id(zapi, group)
                     if result:
                         group_ids.append(result)
             else:
-                result = get_group_id(zbx, target)
+                result = get_group_id(zapi, target)
                 if result:
                     group_ids.append(result)
 
             # Query for hosts
             if ',' in target:
                 for host in target.strip().split(","):
-                    result = get_host_id(zbx, host)
+                    result = get_host_id(zapi, host)
                     if result:
                         host_ids.append(result)
             else:
-                result = get_host_id(zbx, target)
+                result = get_host_id(zapi, target)
                 if result:
                     host_ids.append(result)
 
-             ## info
+            ## info
             #print("Helping out *@%s* to be quiet as ninja when working :) " % requestor)
             # print("host_names          = %s" % host_names)
             # print("host_groups         = %s" % host_groups)
             print("host                = '%s'" % target)
-            print("state               = %s" % state)
-            # print("login_user          = %s" % http_login_user)
-            # print("login_password      = %s" % args.password)
-            # print("http_login_user     = %s" % http_login_user)
-            # print("http_login_password = %s" % args.password)
             print("minutes             = %s" % minutes)
             print("name/id             = %s" % name)
-            print("desc                = %s" % desc)
-            # print("server_url          = %s" % server_url)
-            print("collect_data        = %s" % collect_data)
+            #print("desc                = %s" % desc)
+            #print("collect_data        = %s" % collect_data)
             #print("timeout             = %s" % timeout)
             #print("requestor           = %s" % requestor)
             print("Found %s group(s) / %s host(s) "% (len(group_ids),len(host_ids)) )
 
-            maintenance = get_maintenance_id_by_id(zbx, name)
+            maintenance = get_maintenance_id_by_id(zapi, name)
 
             if not maintenance:
                 if not host_ids and not group_ids:
                     print("At least one host/host group must be defined/found to create maintenance.")
                     return
 
-                outcome = create_maintenance(zbx, group_ids, host_ids, start_time, maintenance_type, period, name, desc)
+                outcome = create_maintenance(zapi, group_ids, host_ids, start_time, maintenance_type, period, name, desc)
                 if not outcome:
                     print("Failed to create maintenance")
 

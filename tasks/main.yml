@@ -1,26 +1,38 @@
 ---
+- name: Copy requirements.txt
+  ansible.builtin.copy:
+    src: requirements.txt
+    dest: /opt/mit-zabbix-maintenance/
+
+- name: Install python3-venv
+  ansible.builtin.apt:
+    pkg: python3-venv
+
+- name: Install pip in venv
+  ansible.builtin.pip:
+    name: pip
+    virtualenv: /opt/mit-zabbix-maintenance/.venv
+    virtualenv_command: python3 -m venv
+
+- name: Updated python dependencies (requirements.txt)
+  ansible.builtin.pip:
+    virtualenv_command: python3 -m venv
+    requirements: /opt/mit-zabbix-maintenance/requirements.txt
+    virtualenv: /opt/mit-zabbix-maintenance/.venv
+  environment: "{{ proxy_env }}"
 
 - name: Copy zabbix-maintenance.py
-  copy:
+  ansible.builtin.copy:
     src: zabbix-maintenance.py
-    dest: /usr/lib/zabbix/externalscripts/
-    mode: 0755
+    dest: /opt/mit-zabbix-maintenance/bin/
+    mode: "0755"
 
-- name: Install python3-pip
-  apt: 
-    pkg: python3-pip
-
-# https://github.com/gescheit/scripts
-- name: Install zabbix-api via pip3
-  pip:
-    executable: pip3
-    name: zabbix-api
-
-# WIP, v0.4 -> https://github.com/gescheit/scripts/blob/master/zabbix/zabbix_api.py from 2021-05-31
-# Adds validate_certs
-- name: Copy zabbix_api.py
-  copy:
-    src: zabbix_api.py
-    dest: /usr/local/lib/python3.7/dist-packages/
-  when: "ansible_hostname == 'zabbix'"
-
+- name: Remove deprecated files
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /usr/local/lib/python2.7/dist-packages/zabbix_api.py
+    - /usr/local/lib/python3.7/dist-packages/zabbix_api.py
+    - /usr/local/lib/python3.9/dist-packages/zabbix_api.py
+    - /usr/lib/zabbix/externalscripts/zabbix-maintenance.py
