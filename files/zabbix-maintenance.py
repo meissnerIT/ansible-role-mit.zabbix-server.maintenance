@@ -18,6 +18,7 @@ import uuid
 import logging
 import os
 import sys
+import urllib3
 from pyzabbix import ZabbixAPI
 
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -137,7 +138,6 @@ def main():
         login_user = configParser.get('DEFAULT', 'zabbix-api.user')
         login_password = configParser.get('DEFAULT', 'zabbix-api.password')
         server_url = configParser.get('DEFAULT', 'zabbix-api.url')
-        validate_certs = configParser.getboolean('DEFAULT', 'zabbix-api.validate_certs')
         log.debug("Got user=%s, url=%s from %s" % (login_user, server_url, args.config))
     else:
         login_user          = args.user
@@ -181,7 +181,7 @@ def main():
         # https://urllib3.readthedocs.io/en/latest/advanced-usage.html#ssl-warnings
         urllib3.disable_warnings()
         zapi.session.verify = False
-        log.info("Disabled certificate verification - please don't use this in production!")
+        #log.info("Disabled certificate verification - please don't use this in production!")
 
     # https://requests.readthedocs.io/en/latest/user/advanced/#proxies
     if configParser.has_option('DEFAULT', 'zabbix-api.proxy'):
