@@ -8,6 +8,7 @@
 #
 # v2024-02-14 by markus.meissner@meissner.IT
 # v2024-10-24: Switched to pyzabbix, not all features are changed / tested
+# v2025-03-03: Switched from host_ids to hosts, see #get_hosts_by_host_ids
 
 import argparse
 import configparser
@@ -57,6 +58,13 @@ parser.add_argument("-v", "--verbose", help="Be verbose", required=False)
 args = parser.parse_args()
 
 
+def get_hosts_by_host_ids(host_ids):
+    hosts = []
+    for host in host_ids:
+        hosts.append({"hostid": host})
+    return hosts
+
+
 def create_maintenance(
     zbx, group_ids, host_ids, start_time, maintenance_type, period, name, desc
 ):
@@ -64,8 +72,8 @@ def create_maintenance(
     try:
         res = zbx.maintenance.create(
             {
-                "groupids": group_ids,
-                "hostids": host_ids,
+                "groups": group_ids,
+                "hosts": get_hosts_by_host_ids(host_ids),
                 "name": name,
                 "maintenance_type": maintenance_type,
                 "active_since": int(start_time),
@@ -153,13 +161,12 @@ def main():
         configFilePath = args.config
         configParser.read(configFilePath)
         login_user = configParser.get("DEFAULT", "zabbix-api.user")
-        # login_password = configParser.get('DEFAULT', 'zabbix-api.password')
+        # login_password = configParser.get("DEFAULT", "zabbix-api.password")
         server_url = configParser.get("DEFAULT", "zabbix-api.url")
-        # validate_certs = configParser.getboolean('DEFAULT', 'zabbix-api.validate_certs')
         log.debug("Got user=%s, url=%s from %s" % (login_user, server_url, args.config))
     else:
         login_user = args.user
-        # login_password      = args.password
+        # login_password = args.password
         server_url = args.server
 
     # host_names          = args.target
@@ -202,9 +209,7 @@ def main():
         # https://urllib3.readthedocs.io/en/latest/advanced-usage.html#ssl-warnings
         urllib3.disable_warnings()
         zapi.session.verify = False
-        log.info(
-            "Disabled certificate verification - please don't use this in production!"
-        )
+        # log.info("Disabled certificate verification - please don't use this in production!")
 
     # https://requests.readthedocs.io/en/latest/user/advanced/#proxies
     if configParser.has_option("DEFAULT", "zabbix-api.proxy"):
@@ -259,6 +264,7 @@ def main():
         # print("Helping out *@%s* to be quiet as ninja when working :) " % requestor)
         # print("host_names          = %s" % host_names)
         # print("host_groups         = %s" % host_groups)
+        # print("host_ids            = '%s'" % host_ids)
         print("host                = '%s'" % target)
         print("minutes             = %s" % minutes)
         print("name/id             = %s" % name)
